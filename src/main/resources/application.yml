@@ -1,0 +1,70 @@
+server:
+  port: 8080
+  
+spring:
+  application:
+    name: order-service
+  
+  # H2 Database Config
+  datasource:
+    url: jdbc:h2:mem:orderdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # JPA Config
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+# Resilience4j configuration for retry and circuit breaking
+resilience4j:
+  retry:
+    instances:
+      inventoryService:
+        maxAttempts: : 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.io.IOException
+          - org.springframework.web.client.HttpServerErrorException
+          - java.util.concurrent.TimeoutException
+  circuitbreaker:
+    instances:
+      inventoryService:
+        slidingWindowSize: 10
+        slidingWindowType: COUNT_BASED
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+
+# External service configuration
+external-service:
+  inventory:
+    url: http://localhost:8081/api/inventory
+    timeout: 3000 # in milliseconds
+
+# Order service scheduler configuration
+order-service:
+  scheduler:
+    retry-rate-ms: 60000  # 1 minute
+    max-retry-minutes: 60 # 1 hour
+    max-attempts: 5
+    retry-delay-seconds: 30 # Wait 30 seconds between retry attempts 
